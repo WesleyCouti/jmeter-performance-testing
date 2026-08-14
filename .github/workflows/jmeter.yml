@@ -1,0 +1,96 @@
+name: JMeter Performance Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      test_plan:
+        description: "Test plan to run"
+        required: true
+        default: "smoke"
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+
+jobs:
+  performance-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Apache JMeter
+        run: |
+          JMETER_VERSION=5.6.3
+          curl -L "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" -o jmeter.tgz
+          tar -xzf jmeter.tgz
+          echo "$PWD/apache-jmeter-${JMETER_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Prepare folders
+        run: |
+          mkdir -p results
+          mkdir -p reports
+
+      - name: Select test plan
+        id: plan
+        shell: bash
+        run: |
+          PLAN="${{ github.event.inputs.test_plan }}"
+          if [[ -z "$PLAN" ]]; then
+            PLAN="smoke"
+          fi
+
+          case "$PLAN" in
+            smoke) FILE="plans/smoke-test.jmx" ;;
+            load) FILE="plans/load-test.jmx" ;;
+            stress) FILE="plans/stress-test.jmx" ;;
+            *) echo "Unknown plan: $PLAN"; exit 1 ;;
+          esac
+
+          echo "plan=$PLAN" >> "$GITHUB_OUTPUT"
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Run JMeter
+        run: |
+          jmeter \
+            -n \
+            -t "${{ steps.plan.outputs.file }}" \
+            -q config/user.properties \
+            -l results/results.jtl \
+            -e \
+            -o reports/html \
+            -Jjmeter.save.saveservice.output_format=csv \
+            -Jjmeter.save.saveservice.successful=true \
+            -Jjmeter.save.saveservice.response_code=true \
+            -Jjmeter.save.saveservice.label=true \
+            -Jjmeter.save.saveservice.time=true
+
+      - name: Validate result status
+        run: |
+          chmod +x scripts/validate-results.sh
+          ./scripts/validate-results.sh results/results.jtl
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-${{ steps.plan.outputs.plan }}-report
+          path: reports/html/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-${{ steps.plan.outputs.plan }}-results
+          path: results/
+          if-no-files-found: ignore
+          retention-days: 14

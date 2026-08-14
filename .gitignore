@@ -1,0 +1,6 @@
+results/
+reports/
+apache-jmeter-*/
+jmeter.tgz
+*.log
+.DS_Store
