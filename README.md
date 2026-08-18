@@ -2,9 +2,9 @@
 
 [![JMeter Performance Tests](https://github.com/WesleyCouti/jmeter-performance-testing/actions/workflows/jmeter.yml/badge.svg)](https://github.com/WesleyCouti/jmeter-performance-testing/actions/workflows/jmeter.yml)
 
-Performance testing framework built with **Apache JMeter 5.6.3**, focused on smoke, load and stress testing, configurable workloads, performance quality gates, HTML reporting and continuous integration.
+Performance testing project built with **Apache JMeter 5.6.3**, covering smoke, load and stress testing with configurable workloads, external test data, performance quality gates, HTML reports and continuous integration with GitHub Actions.
 
-This project is part of my **QA Automation portfolio** and demonstrates a structured approach to performance testing by separating workload profiles, test data, execution configuration, result validation and CI/CD.
+This project is part of my **QA Automation portfolio** and demonstrates how I structure performance tests by separating test plans, workload configuration, test data, result validation and CI execution.
 
 ---
 
@@ -12,8 +12,8 @@ This project is part of my **QA Automation portfolio** and demonstrates a struct
 
 - Apache JMeter 5.6.3
 - HTTP Request Samplers
-- CSV Data Set Config
 - HTTP Request Defaults
+- CSV Data Set Config
 - Response Assertions
 - Duration Assertions
 - Parameterization
@@ -29,21 +29,21 @@ This project is part of my **QA Automation portfolio** and demonstrates a struct
 
 ## Performance Testing Strategy
 
-The project contains three independent performance profiles:
+The project contains three performance profiles with different objectives:
 
 | Profile | Purpose |
 |---|---|
-| Smoke | Validate availability and baseline behavior |
+| Smoke | Validate availability and basic response behavior |
 | Load | Validate behavior under expected concurrent workload |
-| Stress | Observe behavior under sustained increased load |
+| Stress | Validate behavior under a higher and sustained workload |
 
-Each profile has a different execution strategy rather than simply increasing the number of requests.
+The idea is to keep each test focused on a specific performance objective instead of using the same workload with different numbers.
 
 ---
 
-## Smoke Test
+# Smoke Test
 
-The Smoke profile provides fast validation before heavier performance tests are executed.
+The Smoke profile performs a quick validation before running heavier performance tests.
 
 It validates:
 
@@ -53,7 +53,7 @@ It validates:
 - Response-time SLA
 - Performance quality gates
 
-Default workload:
+### Default Workload
 
 ```text
 Virtual users: 1
@@ -61,20 +61,20 @@ Ramp-up:       1 second
 Loops:         1
 ```
 
-### Latest Validated Smoke Execution
+### Validated Smoke Execution
 
 ```text
 Total samples:            1
 Failed samples:           0
 Error rate:               0.00%
-Average response time:    810 ms
-P95 response time:        810 ms
-P99 response time:        810 ms
+Average response time:    653 ms
+P95 response time:        653 ms
+P99 response time:        653 ms
 Approx. throughput:       1.00 req/s
 Execution window:         1.00 s
 ```
 
-Quality gates:
+### Smoke Quality Gates
 
 ```text
 Error Rate <= 0%
@@ -89,63 +89,88 @@ Result:
 Performance quality gate passed.
 ```
 
-> The Smoke execution contains only one sample by design. Its objective is availability and baseline validation rather than statistical performance analysis.
+> The Smoke execution uses only one sample by design. Its purpose is to provide a quick availability and baseline validation before executing larger workloads.
 
 ---
 
-## Load Test
+# Load Test
 
-The Load profile validates the application under a configurable concurrent workload.
+The Load profile validates the API under an expected concurrent workload.
 
-Default profile:
+### Default Workload
 
 ```text
-Virtual users:  10
-Ramp-up:        10 seconds
-Loops:          5
-Think time:     250 ms
+Virtual users: 10
+Ramp-up:       10 seconds
+Loops:         5
+Think time:    250 ms
 ```
 
-With the default configuration:
+The default configuration produces approximately:
 
 ```text
 10 users × 5 iterations
         ↓
-Approximately 50 HTTP requests
+50 HTTP requests
 ```
 
-The workload uses external CSV data to distribute different post IDs across requests.
+The test uses external CSV data to distribute different post IDs between requests.
+
+### Load Validations
 
 The Load profile validates:
 
-- HTTP `200`
+- HTTP status `200`
+- Expected response content
 - Requested resource ID
-- Expected JSON response fields
-- Per-request response-time SLA
+- Response-time SLA
 - Error rate
 - Average response time
 - P95 response time
 - P99 response time
 - Throughput
 
----
-
-## Stress Test
-
-The Stress profile is designed differently from the Load profile.
-
-Instead of executing a fixed number of loops, it runs a **sustained workload for a configurable duration**.
-
-Default profile:
+### Validated Load Execution
 
 ```text
-Virtual users:  10
-Ramp-up:        20 seconds
-Duration:       30 seconds
-Think time:     250 ms
+Total samples:            50
+Failed samples:           0
+Error rate:               0.00%
+Average response time:    34 ms
+P95 response time:        61 ms
+P99 response time:        910 ms
+Approx. throughput:       5.04 req/s
+Execution window:         9.92 s
 ```
 
-Execution model:
+### Load Quality Gates
+
+```text
+Error Rate <= 1%
+Average    <= 1000 ms
+P95        <= 1500 ms
+P99        <= 2000 ms
+```
+
+Result:
+
+```text
+Performance quality gate passed.
+```
+
+The execution completed all **50 samples without failures** and remained within all configured performance thresholds.
+
+---
+
+# Stress Test
+
+The Stress profile applies a higher workload to evaluate application behavior under increased traffic.
+
+Unlike the Load profile, the Stress test uses a sustained workload strategy instead of relying only on a fixed number of loops.
+
+This makes it possible to maintain concurrent requests during a configured execution period.
+
+### Stress Strategy
 
 ```text
 Concurrent Users
@@ -156,14 +181,80 @@ Continuous Requests
        ↓
 Configured Duration
        ↓
-Observe degradation
+Performance Analysis
 ```
 
-The workload can be increased through command-line properties when executed against an environment where performance testing is authorized.
+The workload can be adjusted through JMeter properties without changing the `.jmx` file.
+
+### Stress Validations
+
+The Stress profile validates:
+
+- HTTP status `200`
+- Expected response content
+- Requested resource ID
+- Response-time SLA
+- Error rate
+- Average response time
+- P95 response time
+- P99 response time
+- Throughput
+
+### Validated Stress Execution
+
+```text
+Total samples:            800
+Failed samples:           0
+Error rate:               0.00%
+Average response time:    10 ms
+P95 response time:        11 ms
+P99 response time:        24 ms
+Approx. throughput:       27.01 req/s
+Execution window:         29.62 s
+```
+
+### Stress Quality Gates
+
+```text
+Error Rate <= 2%
+Average    <= 1500 ms
+P95        <= 2500 ms
+P99        <= 4000 ms
+```
+
+Result:
+
+```text
+Performance quality gate passed.
+```
+
+The Stress execution processed **800 samples without failures** while remaining below all configured response-time thresholds.
 
 ---
 
-## Test Architecture
+# Validated Performance Results
+
+The three performance profiles were successfully executed through the CI pipeline.
+
+| Metric | Smoke | Load | Stress |
+|---|---:|---:|---:|
+| Total Samples | 1 | 50 | 800 |
+| Failed Samples | 0 | 0 | 0 |
+| Error Rate | 0.00% | 0.00% | 0.00% |
+| Average Response Time | 653 ms | 34 ms | 10 ms |
+| P95 | 653 ms | 61 ms | 11 ms |
+| P99 | 653 ms | 910 ms | 24 ms |
+| Approx. Throughput | 1.00 req/s | 5.04 req/s | 27.01 req/s |
+| Execution Window | 1.00 s | 9.92 s | 29.62 s |
+| Quality Gate | PASS | PASS | PASS |
+
+> These results represent individual executions against a public demonstration API and should not be interpreted as a benchmark of JSONPlaceholder infrastructure.
+
+The purpose is to demonstrate workload execution, metric collection, percentile analysis and automated performance validation.
+
+---
+
+# Test Architecture
 
 ```text
                    Performance Profiles
@@ -188,8 +279,8 @@ The workload can be increased through command-line properties when executed agai
                            │
               ┌────────────┼────────────┐
               ▼            ▼            ▼
-         HTTP Status    Contract     Response Time
-         Assertions    Validation       SLA
+         HTTP Status    Response     Response Time
+         Assertions     Validation       SLA
               │            │            │
               └────────────┼────────────┘
                            ▼
@@ -212,7 +303,7 @@ The workload can be increased through command-line properties when executed agai
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```text
 jmeter-performance-testing/
@@ -246,13 +337,13 @@ jmeter-performance-testing/
 | `data/` | External test data used by performance scenarios |
 | `config/` | Default JMeter execution properties |
 | `scripts/` | Post-execution result analysis and quality gates |
-| `.github/workflows/` | Automated execution and artifact generation |
+| `.github/workflows/` | CI execution and artifact generation |
 
 ---
 
-## Parameterization
+# Parameterization
 
-The test plans use JMeter properties so workloads can be changed without editing `.jmx` files.
+The test plans use JMeter properties so workloads can be changed without editing the `.jmx` files.
 
 Supported properties include:
 
@@ -271,7 +362,7 @@ response_time_limit_ms
 csv_file
 ```
 
-Example Load execution:
+### Example Load Execution
 
 ```bash
 jmeter \
@@ -287,7 +378,7 @@ jmeter \
   -o reports/load
 ```
 
-Example Stress execution:
+### Example Stress Execution
 
 ```bash
 jmeter \
@@ -303,11 +394,13 @@ jmeter \
   -o reports/stress
 ```
 
+This allows different workload configurations to be executed using the same test plans.
+
 ---
 
-## Test Data Management
+# Test Data Management
 
-The Load and Stress profiles use:
+The Load and Stress profiles use external test data from:
 
 ```text
 data/post-ids.csv
@@ -329,49 +422,49 @@ postId
 10
 ```
 
-The CSV Data Set Config exposes each value as:
+The CSV Data Set Config exposes each value through:
 
 ```text
 ${postId}
 ```
 
-which is used dynamically in requests:
+which is then used dynamically:
 
 ```text
 GET /posts/${postId}
 ```
 
-The response is then validated against the requested resource ID.
-
-This creates a direct relationship between:
+The returned resource is validated against the requested ID.
 
 ```text
-External Data
-     ↓
-HTTP Request
-     ↓
-API Response
-     ↓
-Assertion
+External Test Data
+        ↓
+    HTTP Request
+        ↓
+    API Response
+        ↓
+     Assertion
 ```
+
+Keeping test data outside the test plan also makes it easier to change the workload without modifying request implementation.
 
 ---
 
-## Assertions
+# Assertions
 
-The performance plans include request-level validation.
+The performance plans contain request-level validations so response times are not measured without checking whether the responses themselves are valid.
 
-### HTTP Status
+## HTTP Status
 
-Expected:
+Expected response:
 
 ```text
 HTTP 200
 ```
 
-### Response Content
+## Response Content
 
-Responses are checked for expected fields such as:
+Responses are validated for expected fields such as:
 
 ```text
 userId
@@ -380,11 +473,11 @@ title
 body
 ```
 
-Load and Stress requests also validate that the returned `id` corresponds to the `${postId}` used in the request.
+Load and Stress requests also validate the returned resource against the `${postId}` used by the request.
 
-### Response-Time SLA
+## Response-Time SLA
 
-A configurable Duration Assertion validates individual response times.
+Individual requests are validated using a configurable Duration Assertion.
 
 Default:
 
@@ -392,13 +485,13 @@ Default:
 response_time_limit_ms=2000
 ```
 
-Stress executions can use different limits depending on the selected profile.
+Different execution profiles can use different limits when necessary.
 
 ---
 
-## Performance Quality Gates
+# Performance Quality Gates
 
-Performance validation continues after JMeter finishes execution.
+Performance validation continues after JMeter finishes executing.
 
 The script:
 
@@ -406,7 +499,7 @@ The script:
 scripts/validate-results.sh
 ```
 
-processes the generated `.jtl` file and calculates:
+reads the generated JTL results and calculates:
 
 - Total samples
 - Failed samples
@@ -417,9 +510,9 @@ processes the generated `.jtl` file and calculates:
 - Approximate throughput
 - Execution window
 
-The script then compares the results against configurable thresholds.
+The results are then compared against configurable thresholds.
 
-Supported quality gate variables:
+Supported variables:
 
 ```text
 MAX_ERROR_RATE
@@ -438,33 +531,41 @@ MAX_P99_RESPONSE_TIME_MS=2000 \
 ./scripts/validate-results.sh results/results.jtl
 ```
 
-If any threshold is exceeded:
+If any configured threshold is exceeded:
 
 ```text
 Performance quality gate failed.
 ```
 
-and the process exits with a non-zero status.
+and the script returns a non-zero exit code.
 
-This allows performance regressions to automatically fail the CI pipeline.
+If all metrics remain within the limits:
+
+```text
+Performance quality gate passed.
+```
+
+This allows the CI pipeline to automatically identify performance executions that do not meet the expected criteria.
 
 ---
 
-## Quality Gate Strategy
+# Quality Gate Strategy
 
-The validation architecture works at two levels.
+Performance validation is divided into two levels.
 
-### Request Level
+## Request Level
 
 ```text
 HTTP Status
       +
-Response Contract
+Response Content
       +
 Maximum Response Time
 ```
 
-### Test Level
+These validations happen during JMeter execution.
+
+## Execution Level
 
 ```text
 Error Rate
@@ -474,19 +575,21 @@ Average Response Time
 P95
     +
 P99
-    +
-Throughput Analysis
 ```
 
-This prevents a test from being considered successful only because every HTTP request returned a valid status code.
+These metrics are evaluated after execution using the generated JTL file.
+
+Throughput is also calculated and displayed as part of the performance summary.
+
+This avoids treating a performance test as successful only because the API returned valid HTTP responses.
 
 ---
 
-## Local Execution
+# Local Execution
 
 With Apache JMeter available in the system PATH:
 
-### Smoke
+## Smoke
 
 ```bash
 jmeter \
@@ -498,7 +601,7 @@ jmeter \
   -o reports/smoke
 ```
 
-### Load
+## Load
 
 ```bash
 jmeter \
@@ -510,7 +613,7 @@ jmeter \
   -o reports/load
 ```
 
-### Stress
+## Stress
 
 ```bash
 jmeter \
@@ -522,13 +625,15 @@ jmeter \
   -o reports/stress
 ```
 
-JMeter is executed in **non-GUI mode** for performance runs.
+Performance tests are executed using JMeter in **non-GUI mode**.
+
+The graphical interface should be used mainly for creating and debugging test plans rather than generating load.
 
 ---
 
-## CI/CD Pipeline
+# CI/CD Pipeline
 
-The project uses **GitHub Actions** for automated performance validation.
+The project uses **GitHub Actions** to execute and validate the performance tests.
 
 ```text
                   Push / Pull Request
@@ -561,13 +666,13 @@ The project uses **GitHub Actions** for automated performance validation.
             Artifact              PASS / FAIL
 ```
 
-### Automatic Execution
+## Automatic Execution
 
 Pushes and pull requests execute the **Smoke profile** automatically.
 
-This keeps CI lightweight while still validating that the target and performance framework are operational.
+This provides a lightweight validation of the project without executing heavier workloads on every repository change.
 
-### Manual Execution
+## Manual Execution
 
 The workflow also supports manual execution through:
 
@@ -583,119 +688,130 @@ load
 stress
 ```
 
-This makes heavier performance profiles explicit rather than running them on every repository change.
+This allows Load and Stress executions to be triggered when needed.
 
 ---
 
-## CI Artifacts
+# CI Artifacts
 
-Every execution can generate:
+The pipeline generates artifacts that can be used for later analysis.
 
-### Raw Results
+## Raw JMeter Results
 
 ```text
 results/results.jtl
 ```
 
-### HTML Dashboard
+The JTL file contains the raw execution data used by the quality gate script.
+
+## HTML Dashboard
 
 ```text
 reports/html/
 ```
 
-Both are uploaded as GitHub Actions artifacts and retained for later analysis.
+JMeter generates an HTML performance dashboard containing execution statistics and graphs.
+
+Both outputs are uploaded as GitHub Actions artifacts after the test execution.
 
 ---
 
-## Application Under Test
+# Application Under Test
 
-### JSONPlaceholder
+## JSONPlaceholder
 
-JSONPlaceholder is a public REST API used in this project to demonstrate performance testing concepts.
+The project uses **JSONPlaceholder**, a public REST API commonly used for testing and prototyping.
 
-The current workload targets endpoints such as:
+The current performance scenarios target endpoints such as:
 
 ```text
 GET /posts
 GET /posts/{id}
 ```
 
-The service is not affiliated with this project.
+JSONPlaceholder is not affiliated with this project.
 
 ---
 
-## Responsible Performance Testing
+# Responsible Performance Testing
 
-The target used by this portfolio is a public demonstration API.
+Because this portfolio uses a public demonstration API, the default workloads are intentionally controlled.
 
-For that reason, default workloads are intentionally conservative.
+The purpose of the repository is to demonstrate:
 
-The purpose of this repository is to demonstrate:
-
-- Test design
+- Performance test design
 - Workload modeling
 - Parameterization
-- Performance metrics
-- Result analysis
+- External test data
+- Assertions
+- Response-time analysis
+- Percentiles
+- Throughput
 - Quality gates
-- CI/CD
+- CI/CD integration
 
-rather than generate excessive traffic against a third-party service.
+The objective is not to determine the actual capacity limit of JSONPlaceholder.
 
-Higher workloads should only be executed against environments that are owned by the tester or where explicit authorization for performance testing has been provided.
+Higher workloads should only be executed against environments owned by the tester or where explicit authorization for performance testing has been provided.
 
 ---
 
-## Technical Decisions
+# Technical Decisions
 
-### Why Separate Smoke, Load and Stress Plans?
+## Why Separate Smoke, Load and Stress Plans?
 
-Each profile has a different objective.
+Each performance test answers a different question.
 
 ```text
 Smoke
-→ Is the application ready to test?
+→ Is the application available and responding correctly?
 
 Load
-→ How does it behave under expected load?
+→ How does it behave under an expected workload?
 
 Stress
-→ How does behavior change under sustained increased load?
+→ How does it behave when the workload is increased?
 ```
 
-Keeping them separate makes workload intent explicit.
+Keeping separate plans makes the objective of each execution easier to understand and maintain.
 
-### Why CSV Test Data?
+## Why CSV Test Data?
 
-External data prevents every virtual user from executing exactly the same request.
+External CSV data prevents every virtual user from executing exactly the same request.
 
-It also keeps test data separate from workload implementation.
+It also keeps test data separate from the test implementation.
 
-### Why Non-GUI Execution?
+## Why Parameterization?
 
-Performance tests are designed to run through the JMeter command line rather than the graphical interface.
+Hardcoding workload values inside the test plan would require changing the `.jmx` file whenever a different execution profile was needed.
 
-This reduces test-runner overhead and makes execution suitable for CI environments.
+JMeter properties allow values such as users, ramp-up, duration and think time to be changed directly from the command line or CI pipeline.
 
-### Why Percentiles?
+## Why Non-GUI Execution?
 
-Average response time alone can hide slow requests.
+JMeter's graphical interface is useful for creating and debugging test plans.
 
-P95 and P99 provide visibility into the slower portion of the response-time distribution.
+Actual performance executions use non-GUI mode to reduce unnecessary test-runner overhead and make the same tests suitable for CI environments.
 
-### Why Quality Gates?
+## Why Percentiles?
 
-Generating a performance report without evaluating it would require manual inspection after every execution.
+Average response time does not show the complete response-time distribution.
 
-Automated quality gates allow defined performance expectations to become part of the pipeline result.
+P95 and P99 help identify slower requests that could be hidden by a low average.
 
-### Why GitHub Actions?
+## Why Quality Gates?
 
-Continuous integration provides a repeatable execution environment and allows Smoke validation, performance analysis and report generation without depending on a local machine.
+Collecting performance metrics without evaluating them would require manual analysis after every execution.
+
+The quality gate script converts performance expectations into automated PASS/FAIL criteria.
+
+## Why GitHub Actions?
+
+GitHub Actions provides a repeatable environment where the project can install JMeter, execute the selected performance profile, validate the results and publish reports automatically.
 
 ---
 
-## Skills Demonstrated
+# Skills Demonstrated
 
 This project demonstrates practical experience with:
 
@@ -703,12 +819,10 @@ This project demonstrates practical experience with:
 
 ---
 
-## Roadmap
+# Roadmap
 
 Possible future improvements:
 
-- [ ] Execute and document validated Load profile metrics
-- [ ] Execute and document validated Stress profile metrics
 - [ ] Add minimum throughput quality gate
 - [ ] Generate trend comparisons between executions
 - [ ] Add performance baseline comparison
@@ -718,7 +832,7 @@ Possible future improvements:
 
 ---
 
-## Author
+# Author
 
 **Wesley Coutinho**
 
