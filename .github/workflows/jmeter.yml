@@ -3,12 +3,14 @@ name: JMeter Performance Tests
 on:
   push:
     branches: [main]
+
   pull_request:
     branches: [main]
+
   workflow_dispatch:
     inputs:
       test_plan:
-        description: "Test plan to run"
+        description: "Performance test plan"
         required: true
         default: "smoke"
         type: choice
@@ -19,6 +21,7 @@ on:
 
 jobs:
   performance-tests:
+    name: JMeter ${{ github.event.inputs.test_plan || 'smoke' }} Test
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -27,70 +30,180 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Apache JMeter
+        shell: bash
         run: |
-          JMETER_VERSION=5.6.3
-          curl -L "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" -o jmeter.tgz
+          JMETER_VERSION="5.6.3"
+
+          curl \
+            --fail \
+            --location \
+            --retry 3 \
+            "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" \
+            --output jmeter.tgz
+
           tar -xzf jmeter.tgz
+
           echo "$PWD/apache-jmeter-${JMETER_VERSION}/bin" >> "$GITHUB_PATH"
 
-      - name: Prepare folders
+      - name: Verify JMeter installation
+        run: jmeter --version
+
+      - name: Prepare execution folders
         run: |
+          rm -rf results reports
           mkdir -p results
           mkdir -p reports
 
-      - name: Select test plan
-        id: plan
+      - name: Select performance profile
+        id: profile
         shell: bash
         run: |
           PLAN="${{ github.event.inputs.test_plan }}"
+
           if [[ -z "$PLAN" ]]; then
             PLAN="smoke"
           fi
 
           case "$PLAN" in
-            smoke) FILE="plans/smoke-test.jmx" ;;
-            load) FILE="plans/load-test.jmx" ;;
-            stress) FILE="plans/stress-test.jmx" ;;
-            *) echo "Unknown plan: $PLAN"; exit 1 ;;
+
+            smoke)
+              TEST_FILE="plans/smoke-test.jmx"
+
+              THREADS="1"
+              USERS="1"
+              RAMP_UP="1"
+              LOOPS="1"
+              DURATION="10"
+              THINK_TIME="0"
+
+              MAX_ERROR_RATE="0"
+              MAX_AVG_RESPONSE_TIME_MS="1000"
+              MAX_P95_RESPONSE_TIME_MS="1500"
+              MAX_P99_RESPONSE_TIME_MS="2000"
+              ;;
+
+            load)
+              TEST_FILE="plans/load-test.jmx"
+
+              THREADS="1"
+              USERS="10"
+              RAMP_UP="10"
+              LOOPS="5"
+              DURATION="30"
+              THINK_TIME="250"
+
+              MAX_ERROR_RATE="1"
+              MAX_AVG_RESPONSE_TIME_MS="1000"
+              MAX_P95_RESPONSE_TIME_MS="1500"
+              MAX_P99_RESPONSE_TIME_MS="2000"
+              ;;
+
+            stress)
+              TEST_FILE="plans/stress-test.jmx"
+
+              THREADS="1"
+              USERS="10"
+              RAMP_UP="20"
+              LOOPS="1"
+              DURATION="30"
+              THINK_TIME="250"
+
+              MAX_ERROR_RATE="2"
+              MAX_AVG_RESPONSE_TIME_MS="1500"
+              MAX_P95_RESPONSE_TIME_MS="2500"
+              MAX_P99_RESPONSE_TIME_MS="4000"
+              ;;
+
+            *)
+              echo "Unknown performance profile: $PLAN"
+              exit 1
+              ;;
+
           esac
 
           echo "plan=$PLAN" >> "$GITHUB_OUTPUT"
-          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "test_file=$TEST_FILE" >> "$GITHUB_OUTPUT"
+
+          echo "threads=$THREADS" >> "$GITHUB_OUTPUT"
+          echo "users=$USERS" >> "$GITHUB_OUTPUT"
+          echo "ramp_up=$RAMP_UP" >> "$GITHUB_OUTPUT"
+          echo "loops=$LOOPS" >> "$GITHUB_OUTPUT"
+          echo "duration=$DURATION" >> "$GITHUB_OUTPUT"
+          echo "think_time=$THINK_TIME" >> "$GITHUB_OUTPUT"
+
+          echo "max_error_rate=$MAX_ERROR_RATE" >> "$GITHUB_OUTPUT"
+          echo "max_avg=$MAX_AVG_RESPONSE_TIME_MS" >> "$GITHUB_OUTPUT"
+          echo "max_p95=$MAX_P95_RESPONSE_TIME_MS" >> "$GITHUB_OUTPUT"
+          echo "max_p99=$MAX_P99_RESPONSE_TIME_MS" >> "$GITHUB_OUTPUT"
+
+      - name: Display execution profile
+        run: |
+          echo "========================================"
+          echo "       JMETER EXECUTION PROFILE"
+          echo "========================================"
+          echo "Plan:       ${{ steps.profile.outputs.plan }}"
+          echo "Test file:  ${{ steps.profile.outputs.test_file }}"
+          echo "Users:      ${{ steps.profile.outputs.users }}"
+          echo "Ramp-up:    ${{ steps.profile.outputs.ramp_up }} s"
+          echo "Loops:      ${{ steps.profile.outputs.loops }}"
+          echo "Duration:   ${{ steps.profile.outputs.duration }} s"
+          echo "Think time: ${{ steps.profile.outputs.think_time }} ms"
+          echo "========================================"
 
       - name: Run JMeter
+        shell: bash
         run: |
           jmeter \
             -n \
-            -t "${{ steps.plan.outputs.file }}" \
+            -t "${{ steps.profile.outputs.test_file }}" \
             -q config/user.properties \
             -l results/results.jtl \
             -e \
             -o reports/html \
+            -Jthreads="${{ steps.profile.outputs.threads }}" \
+            -Jusers="${{ steps.profile.outputs.users }}" \
+            -Jramp_up="${{ steps.profile.outputs.ramp_up }}" \
+            -Jloops="${{ steps.profile.outputs.loops }}" \
+            -Jduration_seconds="${{ steps.profile.outputs.duration }}" \
+            -Jthink_time_ms="${{ steps.profile.outputs.think_time }}" \
             -Jjmeter.save.saveservice.output_format=csv \
-            -Jjmeter.save.saveservice.successful=true \
-            -Jjmeter.save.saveservice.response_code=true \
+            -Jjmeter.save.saveservice.print_field_names=true \
+            -Jjmeter.save.saveservice.timestamp=true \
+            -Jjmeter.save.saveservice.time=true \
             -Jjmeter.save.saveservice.label=true \
-            -Jjmeter.save.saveservice.time=true
+            -Jjmeter.save.saveservice.response_code=true \
+            -Jjmeter.save.saveservice.response_message=true \
+            -Jjmeter.save.saveservice.thread_name=true \
+            -Jjmeter.save.saveservice.data_type=true \
+            -Jjmeter.save.saveservice.successful=true
 
-      - name: Validate result status
+      - name: Run performance quality gate
+        shell: bash
+        env:
+          MAX_ERROR_RATE: ${{ steps.profile.outputs.max_error_rate }}
+          MAX_AVG_RESPONSE_TIME_MS: ${{ steps.profile.outputs.max_avg }}
+          MAX_P95_RESPONSE_TIME_MS: ${{ steps.profile.outputs.max_p95 }}
+          MAX_P99_RESPONSE_TIME_MS: ${{ steps.profile.outputs.max_p99 }}
         run: |
           chmod +x scripts/validate-results.sh
-          ./scripts/validate-results.sh results/results.jtl
 
-      - name: Upload HTML report
+          ./scripts/validate-results.sh \
+            results/results.jtl
+
+      - name: Upload HTML dashboard
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jmeter-${{ steps.plan.outputs.plan }}-report
+          name: jmeter-${{ steps.profile.outputs.plan }}-html-report
           path: reports/html/
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload raw results
+      - name: Upload raw JMeter results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jmeter-${{ steps.plan.outputs.plan }}-results
+          name: jmeter-${{ steps.profile.outputs.plan }}-raw-results
           path: results/
           if-no-files-found: ignore
           retention-days: 14
