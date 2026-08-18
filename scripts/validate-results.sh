@@ -13,26 +13,43 @@ if [[ ! -f "$RESULT_FILE" ]]; then
   exit 1
 fi
 
-TOTAL=$(awk -F',' 'NR>1 {count++} END {print count+0}' "$RESULT_FILE")
+TOTAL=$(awk -F',' '
+  NR > 1 {
+    count++
+  }
+  END {
+    print count + 0
+  }
+' "$RESULT_FILE")
 
-FAILED=$(awk -F',' 'NR>1 && $8=="false" {count++} END {print count+0}' "$RESULT_FILE")
+FAILED=$(awk -F',' '
+  NR > 1 && $8 == "false" {
+    count++
+  }
+  END {
+    print count + 0
+  }
+' "$RESULT_FILE")
 
 if [[ "$TOTAL" -eq 0 ]]; then
   echo "No samples were executed."
   exit 1
 fi
 
-ERROR_RATE=$(awk -v failed="$FAILED" -v total="$TOTAL" '
+ERROR_RATE=$(awk \
+  -v failed="$FAILED" \
+  -v total="$TOTAL" '
   BEGIN {
     printf "%.2f", (failed / total) * 100
   }
 ')
 
 AVG_RESPONSE_TIME=$(awk -F',' '
-  NR>1 {
+  NR > 1 {
     sum += $2
     count++
   }
+
   END {
     if (count > 0) {
       printf "%.0f", sum / count
@@ -42,54 +59,84 @@ AVG_RESPONSE_TIME=$(awk -F',' '
   }
 ' "$RESULT_FILE")
 
-P95_RESPONSE_TIME=$(awk -F',' '
-  NR>1 {
-    print $2
+P95_RESPONSE_TIME=$(
+  awk -F',' '
+    NR > 1 {
+      print $2
+    }
+  ' "$RESULT_FILE" |
+  sort -n |
+  awk '
+    {
+      values[NR] = $1
+    }
+
+    END {
+      if (NR == 0) {
+        print 0
+        exit
+      }
+
+      percentile_index = int((NR * 0.95) + 0.999999)
+
+      if (percentile_index < 1) {
+        percentile_index = 1
+      }
+
+      if (percentile_index > NR) {
+        percentile_index = NR
+      }
+
+      print values[percentile_index]
+    }
+  '
+)
+
+P99_RESPONSE_TIME=$(
+  awk -F',' '
+    NR > 1 {
+      print $2
+    }
+  ' "$RESULT_FILE" |
+  sort -n |
+  awk '
+    {
+      values[NR] = $1
+    }
+
+    END {
+      if (NR == 0) {
+        print 0
+        exit
+      }
+
+      percentile_index = int((NR * 0.99) + 0.999999)
+
+      if (percentile_index < 1) {
+        percentile_index = 1
+      }
+
+      if (percentile_index > NR) {
+        percentile_index = NR
+      }
+
+      print values[percentile_index]
+    }
+  '
+)
+
+FIRST_TIMESTAMP=$(awk -F',' '
+  NR == 2 {
+    print $1
+    exit
   }
-' "$RESULT_FILE" \
-  | sort -n \
-  | awk '
-      {
-        values[NR] = $1
-      }
-      END {
-        if (NR == 0) {
-          print 0
-          exit
-        }
-
-        index = int((NR * 0.95) + 0.999999)
-        print values[index]
-      }
-    ')
-
-P99_RESPONSE_TIME=$(awk -F',' '
-  NR>1 {
-    print $2
-  }
-' "$RESULT_FILE" \
-  | sort -n \
-  | awk '
-      {
-        values[NR] = $1
-      }
-      END {
-        if (NR == 0) {
-          print 0
-          exit
-        }
-
-        index = int((NR * 0.99) + 0.999999)
-        print values[index]
-      }
-    ')
-
-FIRST_TIMESTAMP=$(awk -F',' 'NR==2 {print $1}' "$RESULT_FILE")
+' "$RESULT_FILE")
 
 LAST_TIMESTAMP=$(awk -F',' '
-  NR>1 {
-    timestamp=$1
+  NR > 1 {
+    timestamp = $1
   }
+
   END {
     print timestamp
   }
