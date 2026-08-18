@@ -1,31 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
-
-    <TestPlan
-      guiclass="TestPlanGui"
-      testclass="TestPlan"
-      testname="Stress Test - JSONPlaceholder"
-      enabled="true">
-
-      <stringProp name="TestPlan.comments">
-        Duration-based stress profile designed to observe application behavior
-        under increased concurrent load and sustained execution.
-      </stringProp>
-
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Stress Test - JSONPlaceholder" enabled="true">
+      <stringProp name="TestPlan.comments">Duration-based stress test with configurable users, pacing and response-time validation.</stringProp>
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
 
-      <elementProp
-        name="TestPlan.user_defined_variables"
-        elementType="Arguments"
-        guiclass="ArgumentsPanel"
-        testclass="Arguments"
-        testname="Test Variables"
-        enabled="true">
-
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="Test Variables" enabled="true">
         <collectionProp name="Arguments.arguments">
-
           <elementProp name="protocol" elementType="Argument">
             <stringProp name="Argument.name">protocol</stringProp>
             <stringProp name="Argument.value">${__P(protocol,https)}</stringProp>
@@ -75,319 +57,120 @@
             <stringProp name="Argument.name">csv_file</stringProp>
             <stringProp name="Argument.value">${__P(csv_file,data/post-ids.csv)}</stringProp>
           </elementProp>
-
         </collectionProp>
       </elementProp>
     </TestPlan>
 
     <hashTree>
-
-      <!-- Shared HTTP configuration -->
-      <ConfigTestElement
-        guiclass="HttpDefaultsGui"
-        testclass="ConfigTestElement"
-        testname="HTTP Request Defaults"
-        enabled="true">
-
-        <elementProp
-          name="HTTPsampler.Arguments"
-          elementType="Arguments"
-          guiclass="HTTPArgumentsPanel"
-          testclass="Arguments"
-          testname="User Defined Variables"
-          enabled="true">
-
+      <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults" enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
           <collectionProp name="Arguments.arguments"/>
         </elementProp>
 
         <stringProp name="HTTPSampler.domain">${base_url}</stringProp>
         <stringProp name="HTTPSampler.protocol">${protocol}</stringProp>
-
-        <stringProp name="HTTPSampler.connect_timeout">
-          ${connect_timeout_ms}
-        </stringProp>
-
-        <stringProp name="HTTPSampler.response_timeout">
-          ${response_timeout_ms}
-        </stringProp>
-
+        <stringProp name="HTTPSampler.connect_timeout">${connect_timeout_ms}</stringProp>
+        <stringProp name="HTTPSampler.response_timeout">${response_timeout_ms}</stringProp>
       </ConfigTestElement>
-
       <hashTree/>
 
-      <!-- Shared headers -->
-      <HeaderManager
-        guiclass="HeaderPanel"
-        testclass="HeaderManager"
-        testname="HTTP Headers"
-        enabled="true">
-
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Headers" enabled="true">
         <collectionProp name="HeaderManager.headers">
-
           <elementProp name="Accept" elementType="Header">
             <stringProp name="Header.name">Accept</stringProp>
             <stringProp name="Header.value">application/json</stringProp>
           </elementProp>
-
         </collectionProp>
       </HeaderManager>
-
       <hashTree/>
 
-      <!-- External test data -->
-      <CSVDataSet
-        guiclass="TestBeanGUI"
-        testclass="CSVDataSet"
-        testname="Post IDs"
-        enabled="true">
-
+      <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Post IDs" enabled="true">
         <stringProp name="filename">${csv_file}</stringProp>
         <stringProp name="fileEncoding">UTF-8</stringProp>
         <stringProp name="variableNames">postId</stringProp>
-
         <boolProp name="ignoreFirstLine">true</boolProp>
-
         <stringProp name="delimiter">,</stringProp>
-
         <boolProp name="quotedData">false</boolProp>
         <boolProp name="recycle">true</boolProp>
         <boolProp name="stopThread">false</boolProp>
-
         <stringProp name="shareMode">shareMode.all</stringProp>
       </CSVDataSet>
-
       <hashTree/>
 
-      <!-- Sustained stress workload -->
-      <ThreadGroup
-        guiclass="ThreadGroupGui"
-        testclass="ThreadGroup"
-        testname="Stress Users"
-        enabled="true">
-
-        <stringProp name="ThreadGroup.num_threads">
-          ${users}
-        </stringProp>
-
-        <stringProp name="ThreadGroup.ramp_time">
-          ${ramp_up}
-        </stringProp>
-
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Stress Users" enabled="true">
+        <stringProp name="ThreadGroup.num_threads">${users}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${ramp_up}</stringProp>
         <boolProp name="ThreadGroup.scheduler">true</boolProp>
-
-        <stringProp name="ThreadGroup.duration">
-          ${duration_seconds}
-        </stringProp>
-
+        <stringProp name="ThreadGroup.duration">${duration_seconds}</stringProp>
         <stringProp name="ThreadGroup.delay">0</stringProp>
 
-        <elementProp
-          name="ThreadGroup.main_controller"
-          elementType="LoopController"
-          guiclass="LoopControlPanel"
-          testclass="LoopController"
-          testname="Loop Controller"
-          enabled="true">
-
-          <boolProp name="LoopController.continue_forever">
-            true
-          </boolProp>
-
-          <stringProp name="LoopController.loops">
-            -1
-          </stringProp>
-
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
         </elementProp>
-
       </ThreadGroup>
 
       <hashTree>
-
-        <HTTPSamplerProxy
-          guiclass="HttpTestSampleGui"
-          testclass="HTTPSamplerProxy"
-          testname="GET /posts/${postId}"
-          enabled="true">
-
-          <elementProp
-            name="HTTPsampler.Arguments"
-            elementType="Arguments">
-
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET /posts/${postId}" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
 
-          <stringProp name="HTTPSampler.path">
-            /posts/${postId}
-          </stringProp>
-
-          <stringProp name="HTTPSampler.method">
-            GET
-          </stringProp>
-
-          <boolProp name="HTTPSampler.follow_redirects">
-            true
-          </boolProp>
-
-          <boolProp name="HTTPSampler.auto_redirects">
-            false
-          </boolProp>
-
-          <boolProp name="HTTPSampler.use_keepalive">
-            true
-          </boolProp>
-
-          <boolProp name="HTTPSampler.DO_MULTIPART_POST">
-            false
-          </boolProp>
-
+          <stringProp name="HTTPSampler.path">/posts/${postId}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
         </HTTPSamplerProxy>
 
         <hashTree>
-
-          <!-- Status validation -->
-          <ResponseAssertion
-            guiclass="AssertionGui"
-            testclass="ResponseAssertion"
-            testname="Assert HTTP 200"
-            enabled="true">
-
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 200" enabled="true">
             <collectionProp name="Asserion.test_strings">
               <stringProp name="200">200</stringProp>
             </collectionProp>
-
-            <stringProp name="Assertion.custom_message">
-              Expected HTTP status 200 during stress execution
-            </stringProp>
-
-            <stringProp name="Assertion.test_field">
-              Assertion.response_code
-            </stringProp>
-
-            <boolProp name="Assertion.assume_success">
-              false
-            </boolProp>
-
-            <intProp name="Assertion.test_type">
-              8
-            </intProp>
-
+            <stringProp name="Assertion.custom_message">Expected HTTP status 200 during stress test.</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
           </ResponseAssertion>
-
           <hashTree/>
 
-          <!-- Validate requested resource -->
-          <ResponseAssertion
-            guiclass="AssertionGui"
-            testclass="ResponseAssertion"
-            testname="Assert Requested Post ID"
-            enabled="true">
-
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Requested Post ID" enabled="true">
             <collectionProp name="Asserion.test_strings">
-
-              <stringProp name="postId">
-                &quot;id&quot;: ${postId}
-              </stringProp>
-
+              <stringProp name="postId">&quot;id&quot;: ${postId}</stringProp>
             </collectionProp>
-
-            <stringProp name="Assertion.custom_message">
-              Stress response does not contain the requested post ID
-            </stringProp>
-
-            <stringProp name="Assertion.test_field">
-              Assertion.response_data
-            </stringProp>
-
-            <boolProp name="Assertion.assume_success">
-              false
-            </boolProp>
-
-            <intProp name="Assertion.test_type">
-              16
-            </intProp>
-
+            <stringProp name="Assertion.custom_message">Response does not contain the requested post ID.</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
           </ResponseAssertion>
-
           <hashTree/>
 
-          <!-- Basic response contract -->
-          <ResponseAssertion
-            guiclass="AssertionGui"
-            testclass="ResponseAssertion"
-            testname="Assert Post Contract Fields"
-            enabled="true">
-
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Post Response Fields" enabled="true">
             <collectionProp name="Asserion.test_strings">
-
-              <stringProp name="userId">
-                &quot;userId&quot;
-              </stringProp>
-
-              <stringProp name="title">
-                &quot;title&quot;
-              </stringProp>
-
-              <stringProp name="body">
-                &quot;body&quot;
-              </stringProp>
-
+              <stringProp name="userId">&quot;userId&quot;</stringProp>
+              <stringProp name="title">&quot;title&quot;</stringProp>
+              <stringProp name="body">&quot;body&quot;</stringProp>
             </collectionProp>
-
-            <stringProp name="Assertion.custom_message">
-              Expected JSON post fields were not found
-            </stringProp>
-
-            <stringProp name="Assertion.test_field">
-              Assertion.response_data
-            </stringProp>
-
-            <boolProp name="Assertion.assume_success">
-              false
-            </boolProp>
-
-            <intProp name="Assertion.test_type">
-              16
-            </intProp>
-
+            <stringProp name="Assertion.custom_message">Expected post fields were not found in the response.</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">16</intProp>
           </ResponseAssertion>
-
           <hashTree/>
 
-          <!-- Per-request maximum response time -->
-          <DurationAssertion
-            guiclass="DurationAssertionGui"
-            testclass="DurationAssertion"
-            testname="Maximum Response Time"
-            enabled="true">
-
-            <stringProp name="DurationAssertion.duration">
-              ${response_time_limit_ms}
-            </stringProp>
-
+          <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Response Time SLA" enabled="true">
+            <stringProp name="DurationAssertion.duration">${response_time_limit_ms}</stringProp>
           </DurationAssertion>
-
           <hashTree/>
-
         </hashTree>
 
-        <!-- Simulated user pacing -->
-        <ConstantTimer
-          guiclass="ConstantTimerGui"
-          testclass="ConstantTimer"
-          testname="User Think Time"
-          enabled="true">
-
-          <stringProp name="ConstantTimer.delay">
-            ${think_time_ms}
-          </stringProp>
-
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Think Time" enabled="true">
+          <stringProp name="ConstantTimer.delay">${think_time_ms}</stringProp>
         </ConstantTimer>
-
         <hashTree/>
-
       </hashTree>
-
     </hashTree>
-
   </hashTree>
 </jmeterTestPlan>
